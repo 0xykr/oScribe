@@ -79,7 +79,12 @@ export default class LatexSuitePlugin extends Plugin implements LatexSuitePlugin
 
 	async loadSettings() {
 
-		let data = v.parse(v.record(v.string(), v.any()), await this.loadData());
+		const loadedData = (await this.loadData()) || {};
+
+		let data = v.parse(
+			v.record(v.string(), v.any()),
+			loadedData
+		);
 
 		// Migrate settings from v1.8.0 - v1.8.4
 		const shouldMigrateSettings = data ? "basicSettings" in data : false;

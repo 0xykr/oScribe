@@ -1,11 +1,10 @@
 {
-	"id": "obsidian-latex-suite",
-	"name": "Latex Suite",
-	"version": "1.11.5",
-	"minAppVersion": "1.1.0",
-	"description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements.",
-	"author": "artisticat",
-	"authorUrl": "https://github.com/artisticat1",
-	"fundingUrl": "https://ko-fi.com/artisticat",
-	"isDesktopOnly": false
+  "id": "oscribe",
+  "name": "oScribe",
+  "version": "0.0.1",
+  "minAppVersion": "1.0.0",
+  "description": "LaTex rendering and Sympy symbolic calculation tooling for Obsidian",
+  "author": "0xykr",
+  "authorUrl": "https://github.com/0xykr",
+  "isDesktopOnly": false
 }

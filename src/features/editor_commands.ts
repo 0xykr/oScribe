@@ -8,6 +8,7 @@ import { LatexSuitePluginSettings } from "src/settings/settings";
 import { newlineMatrixShortcut} from "./matrix_shortcuts";
 import { insertNewlineAndIndent } from "@codemirror/commands";
 import { Transaction, Annotation, TransactionSpec } from "@codemirror/state";
+import { getSymPyCommands } from "./sympy_commands"
 
 
 function boxCurrentEquation(view: EditorView) {
@@ -161,6 +162,7 @@ export const getEditorCommands = (plugin: LatexSuitePlugin) => {
 		getDisableAllFeaturesCommand(plugin),
 		getToggleConcealCommand(plugin),
 		getToggleAllFeaturesCommand(plugin),
+		...getSymPyCommands(plugin)
 	];
 };
 
