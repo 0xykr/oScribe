@@ -125,14 +125,27 @@ def _equation(source: str, context: MathContext) -> sp.Equality:
 
 def _dependent_function(equation: sp.Equality) -> AppliedUndef:
     functions: dict[type[sp.Function], AppliedUndef] = {}
-    for derivative in equation.atoms(sp.Derivative):
+    derivatives = equation.atoms(sp.Derivative)
+    for derivative in derivatives:
         for function in derivative.expr.atoms(AppliedUndef):
             functions[function.func] = function
     if len(functions) != 1:
         raise PDEError(
             "Expected exactly one dependent function inside partial derivatives."
         )
-    return next(iter(functions.values()))
+    dependent = next(iter(functions.values()))
+    if any(
+        not any(
+            applied.func == dependent.func
+            for applied in derivative.expr.atoms(AppliedUndef)
+        )
+        for derivative in derivatives
+    ):
+        raise PDEError(
+            "Every partial derivative must act on the same dependent function. "
+            f"Write {dependent.func.__name__}(...) explicitly in each numerator."
+        )
+    return dependent
 
 
 def _pde_order(equation: sp.Equality, function: AppliedUndef) -> int:

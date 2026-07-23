@@ -31,6 +31,16 @@ class PartialDerivativeParserTests(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "orders do not match"):
             parse_expression(r"\frac{\partial^2 f(x,y)}{\partial x}")
 
+    def test_powered_function_name_is_not_silently_ignored(self):
+        with self.assertRaisesRegex(PDEError, "Every partial derivative"):
+            analyze_and_solve_pde(
+                MathContext(),
+                (
+                    r"\frac{\partial u^2(x,y)}{\partial x}"
+                    r"+\frac{\partial u(x,y)}{\partial y}=0"
+                ),
+            )
+
 
 class PDEOperationTests(unittest.TestCase):
     def test_transport_equation_solves_and_verifies(self):
