@@ -6,5 +6,5 @@
   "description": "LaTex rendering and Sympy symbolic calculation tooling for Obsidian",
   "author": "0xykr",
   "authorUrl": "https://github.com/0xykr",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }

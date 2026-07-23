@@ -19,6 +19,9 @@ const args = {
 	external: [
 		"obsidian",
 		"electron",
+		"child_process",
+		"fs",
+		"path",
 		"@codemirror/autocomplete",
 		"@codemirror/closebrackets",
 		"@codemirror/collab",

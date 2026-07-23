@@ -1,9 +1,10 @@
-import LatexSuitePlugin from "src/main";
+import type LatexSuitePlugin from "src/main";
 import { Editor, MarkdownView, Notice } from "obsidian"
 import { EditorView } from "@codemirror/view";
 import { getContextPlugin } from "src/utils/context";
+import { getSymPyMathCommands } from "./sympy_math_commands";
 
-function ensureMathMode(
+export function ensureMathMode(
     editor: Editor,
     thing: string
 ): boolean {
@@ -26,7 +27,7 @@ function ensureMathMode(
     return true;
 }
 
-function grabSymbolicContext(editor: Editor) {
+export function grabSymbolicContext(editor: Editor) {
     const cursor = editor.getCursor();
     const content = editor.getValue();
 
@@ -69,39 +70,16 @@ function grabSymbolicContext(editor: Editor) {
 
 export const getSymPyCommands = (plugin: LatexSuitePlugin) => {
     return [
-        getSympyTestCommand(plugin),
         getNewContextChunkCommand(plugin),
-        getCursorMathContext(plugin),
         insertVariableDefinition(plugin),
 		insertFunctionDefinition(plugin),
         insertEquationDefinition(plugin),
+        ...getSymPyMathCommands(plugin),
     ];
 };
 
-const getSympyTestCommand = (
-    plugin: LatexSuitePlugin
-) => ({
-    id: "oscribe-sympy-test",
-    name: "oScribe SymPy Test",
 
-    editorCallback: async (editor: Editor) => {
-        const context = grabSymbolicContext(editor);
-
-        console.log(context);
-
-        new Notice("HELLO", 5000);
-    },
-});
-
-
-const getCursorMathContext = (editor) => ({
-		id: "oscribe"
-});
-
-
-const getNewContextChunkCommand = (
-    plugin: LatexSuitePlugin
-) => ({
+const getNewContextChunkCommand = (plugin: LatexSuitePlugin) => ({
     id: "oscribe-new-context-chunk",
     name: "New Problem",
 
