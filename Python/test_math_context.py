@@ -10,6 +10,8 @@ from operations import (
     UnevaluatedIntegral,
     definite_integral,
     differentiate,
+    fourier_series_expansion,
+    fourier_transform,
     integrate,
     numerical_evaluate,
     simplify_or_solve,
@@ -106,6 +108,21 @@ class ResolutionAndOperationTests(unittest.TestCase):
             numerical_evaluate(MathContext(), r"\pi", 6),
             "3.14159",
         )
+
+    def test_fourier_transform(self):
+        result = fourier_transform(MathContext(), r"\exp(-x^2)", "x", "k")
+        self.assertIn(r"\pi", result)
+        self.assertIn("k", result)
+
+    def test_fourier_series_expansion(self):
+        result = fourier_series_expansion(
+            MathContext(), "x", "x", r"-\pi", r"\pi", 3
+        )
+        self.assertIn(r"\sin", result)
+
+    def test_fourier_series_rejects_zero_interval(self):
+        with self.assertRaisesRegex(Exception, "zero length"):
+            fourier_series_expansion(MathContext(), "x", "x", "0", "0", 3)
 
     def test_function_integral_uses_constraint_resolution(self):
         context = parse_context("$a=2$\n$f(x)=a x$", 2)

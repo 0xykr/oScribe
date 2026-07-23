@@ -213,6 +213,13 @@ def parse_expression(
         ) from error
     if not isinstance(parsed, sp.Basic):
         raise ParseError("Expected an expression rather than a relation.")
+    parsed = parsed.xreplace(
+        {
+            symbol: sp.pi
+            for symbol in parsed.free_symbols
+            if symbol.name == "pi"
+        }
+    )
     return parsed
 
 

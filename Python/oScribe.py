@@ -12,6 +12,8 @@ from operations import (
     definite_integral,
     differentiate,
     integrate,
+    fourier_series_expansion,
+    fourier_transform,
     matrix_operation,
     numerical_evaluate,
     simplify_or_solve,
@@ -69,6 +71,22 @@ def dispatch(request: dict[str, Any]) -> dict[str, Any]:
             context,
             str(context_data.get("expression", "")),
             context_data.get("precision", 15),
+        )
+    elif command == "fourier_transform":
+        latex = fourier_transform(
+            context,
+            str(context_data.get("expression", "")),
+            str(context_data.get("wrt", "")),
+            str(context_data.get("frequency", "")),
+        )
+    elif command == "fourier_series":
+        latex = fourier_series_expansion(
+            context,
+            str(context_data.get("expression", "")),
+            str(context_data.get("wrt", "")),
+            str(context_data.get("lower", "")),
+            str(context_data.get("upper", "")),
+            context_data.get("terms", 5),
         )
     elif command == "pde_analyze_solve":
         result = analyze_and_solve_pde(

@@ -35,6 +35,10 @@ class NumericalEvaluationError(MathContextError):
     pass
 
 
+class FourierOperationError(MathContextError):
+    pass
+
+
 def _integration_variable(wrt_source: str) -> sp.Symbol:
     wrt = parse_expression(wrt_source)
     if not isinstance(wrt, sp.Symbol):
@@ -173,6 +177,74 @@ def numerical_evaluate(
     except Exception as error:
         raise NumericalEvaluationError(
             f"Could not numerically evaluate this expression: {error}"
+        ) from error
+    return sp.latex(result)
+
+
+def fourier_transform(
+    context: MathContext,
+    expression_source: str,
+    variable_source: str,
+    frequency_source: str,
+) -> str:
+    expression = context.resolve(
+        parse_expression(expression_source, context.matrix_symbols())
+    )
+    variable = parse_expression(variable_source)
+    frequency = parse_expression(frequency_source)
+    if not isinstance(variable, sp.Symbol) or not isinstance(frequency, sp.Symbol):
+        raise FourierOperationError(
+            "Fourier transform variables must each be a single symbol."
+        )
+    try:
+        result = sp.fourier_transform(expression, variable, frequency)
+    except Exception as error:
+        raise FourierOperationError(
+            f"Could not calculate this Fourier transform: {error}"
+        ) from error
+    if result.has(sp.FourierTransform):
+        raise FourierOperationError(
+            "SymPy could not reduce this Fourier transform to a closed form."
+        )
+    return sp.latex(result)
+
+
+def fourier_series_expansion(
+    context: MathContext,
+    expression_source: str,
+    variable_source: str,
+    lower_source: str,
+    upper_source: str,
+    terms_value: object,
+) -> str:
+    variable = parse_expression(variable_source)
+    if not isinstance(variable, sp.Symbol):
+        raise FourierOperationError(
+            "The Fourier series variable must be a single symbol."
+        )
+    try:
+        terms = int(terms_value)
+    except (TypeError, ValueError) as error:
+        raise FourierOperationError(
+            "Fourier series terms must be an integer from 1 to 1000."
+        ) from error
+    if isinstance(terms_value, bool) or not 1 <= terms <= 1000:
+        raise FourierOperationError(
+            "Fourier series terms must be an integer from 1 to 1000."
+        )
+    expression = context.resolve(
+        parse_expression(expression_source, context.matrix_symbols())
+    )
+    lower = context.resolve(parse_expression(lower_source))
+    upper = context.resolve(parse_expression(upper_source))
+    if sp.simplify(upper - lower) == 0:
+        raise FourierOperationError("Fourier series interval cannot have zero length.")
+    try:
+        series = sp.fourier_series(expression, (variable, lower, upper))
+        result = series.truncate(n=terms)
+    except Exception as error:
+        raise FourierOperationError(
+            f"Could not calculate this Fourier series: {error}"
         ) from error
     return sp.latex(result)
 

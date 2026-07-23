@@ -13,7 +13,9 @@ export interface SymPyRequest {
 		| "pde_analyze_solve"
 		| "pde_separate"
 		| "simplify_or_solve"
-		| "numerical_evaluate";
+		| "numerical_evaluate"
+		| "fourier_transform"
+		| "fourier_series";
 	context: {
 		chunk: string;
 		line: number;
@@ -28,6 +30,8 @@ export interface SymPyRequest {
 		function?: string;
 		ansatz?: string;
 		precision?: number;
+		frequency?: string;
+		terms?: number;
 	};
 }
 

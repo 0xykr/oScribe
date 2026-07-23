@@ -14,6 +14,8 @@ const DEFINITE_INTEGRAL_COMMAND = "\\definiteintegral";
 const SEPARATE_PDE_COMMAND = "\\separatepde";
 const SOLVE_SIMPLIFY_COMMAND = "\\solvesimplify";
 const EVALUATE_COMMAND = "\\evaluate";
+const FOURIER_TRANSFORM_COMMAND = "\\fouriertransform";
+const FOURIER_SERIES_COMMAND = "\\fourierseries";
 const PLACEHOLDER = "\\placeholder";
 
 interface ActiveDiff {
@@ -42,6 +44,8 @@ const activeDefiniteIntegrals = new WeakMap<EditorView, ActiveDiff>();
 const activePDESeparations = new WeakMap<EditorView, ActiveDiff>();
 const activeSolveSimplifies = new WeakMap<EditorView, ActiveDiff>();
 const activeEvaluations = new WeakMap<EditorView, ActiveDiff>();
+const activeFourierTransforms = new WeakMap<EditorView, ActiveDiff>();
+const activeFourierSeries = new WeakMap<EditorView, ActiveDiff>();
 
 export const getSymPyMathCommands = (plugin: LatexSuitePlugin) => [
 	differentiateCommand(plugin),
@@ -49,6 +53,8 @@ export const getSymPyMathCommands = (plugin: LatexSuitePlugin) => [
 	definiteIntegralCommand(plugin),
 	solveSimplifyCommand(plugin),
 	evaluateCommand(plugin),
+	fourierTransformCommand(plugin),
+	fourierSeriesCommand(plugin),
 	analyzeSolvePDECommand(plugin),
 	separatePDECommand(plugin),
 	...getMatrixCommands(plugin),
@@ -66,6 +72,8 @@ export function getSymPyMathKeymap(
 				moveDefiniteIntegralField(view, false) ||
 				moveComputeField(view, activeSolveSimplify, false) ||
 				moveComputeField(view, activeEvaluation, false) ||
+				moveFourierTransformField(view, false) ||
+				moveFourierSeriesField(view, false) ||
 				movePDEField(view, false),
 		},
 		{
@@ -76,6 +84,8 @@ export function getSymPyMathKeymap(
 				moveDefiniteIntegralField(view, true) ||
 				moveComputeField(view, activeSolveSimplify, true) ||
 				moveComputeField(view, activeEvaluation, true) ||
+				moveFourierTransformField(view, true) ||
+				moveFourierSeriesField(view, true) ||
 				movePDEField(view, true),
 		},
 		{
@@ -104,6 +114,16 @@ export function getSymPyMathKeymap(
 				const evaluation = activeEvaluation(view);
 				if (evaluation) {
 					void submitEvaluation(plugin, view, evaluation);
+					return true;
+				}
+				const transform = activeFourierTransform(view);
+				if (transform) {
+					void submitFourierTransform(plugin, view, transform);
+					return true;
+				}
+				const series = activeFourierSeriesCommand(view);
+				if (series) {
+					void submitFourierSeries(plugin, view, series);
 					return true;
 				}
 				const pde = activePDESeparation(view);
@@ -139,6 +159,18 @@ export function getSymPyMathKeymap(
 					if (evaluation) {
 						cancelInlineCommand(view, evaluation);
 						activeEvaluations.delete(view);
+						return true;
+					}
+					const transform = activeFourierTransform(view);
+					if (transform) {
+						cancelInlineCommand(view, transform);
+						activeFourierTransforms.delete(view);
+						return true;
+					}
+					const series = activeFourierSeriesCommand(view);
+					if (series) {
+						cancelInlineCommand(view, series);
+						activeFourierSeries.delete(view);
 						return true;
 					}
 					const pde = activePDESeparation(view);
@@ -210,6 +242,20 @@ function activeEvaluation(view: EditorView): ParsedInlineIntegral | null {
 	if (!activeEvaluations.has(view)) return null;
 	const parsed = parseTwoFieldCommand(view, EVALUATE_COMMAND);
 	if (!parsed) activeEvaluations.delete(view);
+	return parsed;
+}
+
+function activeFourierTransform(view: EditorView): ParsedFourierTransform | null {
+	if (!activeFourierTransforms.has(view)) return null;
+	const parsed = parseFourierTransform(view);
+	if (!parsed) activeFourierTransforms.delete(view);
+	return parsed;
+}
+
+function activeFourierSeriesCommand(view: EditorView): ParsedFourierSeries | null {
+	if (!activeFourierSeries.has(view)) return null;
+	const parsed = parseFourierSeries(view);
+	if (!parsed) activeFourierSeries.delete(view);
 	return parsed;
 }
 
@@ -307,6 +353,53 @@ function moveComputeField(
 		[parsed.exprFrom, parsed.exprTo],
 		[parsed.wrtFrom, parsed.wrtTo],
 	] as const;
+	const selection = view.state.selection.main;
+	let current = fields.findIndex(
+		([from, to]) => selection.from >= from && selection.to <= to,
+	);
+	if (current < 0) current = backwards ? 0 : -1;
+	const next = (current + (backwards ? -1 : 1) + fields.length) % fields.length;
+	view.dispatch({
+		selection: EditorSelection.single(fields[next][0], fields[next][1]),
+	});
+	return true;
+}
+
+function moveFourierTransformField(view: EditorView, backwards: boolean): boolean {
+	const parsed = activeFourierTransform(view);
+	if (!parsed) return false;
+	return moveRanges(
+		view,
+		[
+			[parsed.exprFrom, parsed.exprTo],
+			[parsed.variableFrom, parsed.variableTo],
+			[parsed.frequencyFrom, parsed.frequencyTo],
+		],
+		backwards,
+	);
+}
+
+function moveFourierSeriesField(view: EditorView, backwards: boolean): boolean {
+	const parsed = activeFourierSeriesCommand(view);
+	if (!parsed) return false;
+	return moveRanges(
+		view,
+		[
+			[parsed.exprFrom, parsed.exprTo],
+			[parsed.variableFrom, parsed.variableTo],
+			[parsed.lowerFrom, parsed.lowerTo],
+			[parsed.upperFrom, parsed.upperTo],
+			[parsed.termsFrom, parsed.termsTo],
+		],
+		backwards,
+	);
+}
+
+function moveRanges(
+	view: EditorView,
+	fields: ReadonlyArray<readonly [number, number]>,
+	backwards: boolean,
+): boolean {
 	const selection = view.state.selection.main;
 	let current = fields.findIndex(
 		([from, to]) => selection.from >= from && selection.to <= to,
@@ -471,6 +564,76 @@ const evaluateCommand = (_plugin: LatexSuitePlugin) =>
 		activeEvaluations,
 		false,
 	);
+
+const fourierTransformCommand = (_plugin: LatexSuitePlugin) =>
+	createParameterizedCommand(
+		"oscribe-sympy-fourier-transform",
+		"oScribe: Calculate Fourier transform",
+		FOURIER_TRANSFORM_COMMAND,
+		["x", "k"],
+		activeFourierTransforms,
+	);
+
+const fourierSeriesCommand = (_plugin: LatexSuitePlugin) =>
+	createParameterizedCommand(
+		"oscribe-sympy-fourier-series",
+		"oScribe: Calculate Fourier series expansion",
+		FOURIER_SERIES_COMMAND,
+		["x", String.raw`-\pi`, String.raw`\pi`, "5"],
+		activeFourierSeries,
+	);
+
+function createParameterizedCommand(
+	id: string,
+	name: string,
+	command: string,
+	defaults: string[],
+	active: WeakMap<EditorView, ActiveDiff>,
+) {
+	return {
+		id,
+		name,
+		editorCallback(editor: Editor) {
+			if (!ensureMathMode(editor, name)) return;
+			const view = editor.cm;
+			const ctx = getContextPlugin(view);
+			if (!ctx.mode.strictlyInMath()) {
+				new Notice(`${name} must be used directly in a math expression.`);
+				return;
+			}
+			const bounds = ctx.getInnerBounds();
+			if (!bounds) {
+				new Notice("Could not determine the current mathematical expression.");
+				return;
+			}
+			const selection = view.state.selection.main;
+			const selected =
+				!selection.empty &&
+				selection.from >= bounds.inner_start &&
+				selection.to <= bounds.inner_end;
+			const inferred = expressionRangeAtCursor(
+				view.state.doc.toString(),
+				bounds.inner_start,
+				bounds.inner_end,
+				selection.head,
+			);
+			const from = selected ? selection.from : inferred.from;
+			const to = selected ? selection.to : inferred.to;
+			const expression = view.state.sliceDoc(from, to) || PLACEHOLDER;
+			const scaffold =
+				`${command}{${expression}}` +
+				defaults.map((value) => `{${value}}`).join("");
+			view.dispatch({
+				changes: { from, to, insert: scaffold },
+				selection: EditorSelection.single(
+					from + command.length + 1,
+					from + command.length + 1 + expression.length,
+				),
+			});
+			active.set(view, { editor });
+		},
+	};
+}
 
 function createTwoFieldCommand(
 	id: string,
@@ -1072,6 +1235,124 @@ async function submitEvaluation(
 	);
 }
 
+async function submitFourierTransform(
+	plugin: LatexSuitePlugin,
+	view: EditorView,
+	parsed: ParsedFourierTransform,
+): Promise<void> {
+	const active = activeFourierTransforms.get(view);
+	if (!active) return;
+	const symbolicContext = grabSymbolicContext(active.editor);
+	if (!symbolicContext) {
+		new Notice("Could not determine the current mathematical context.");
+		return;
+	}
+	const cursor = active.editor.getCursor();
+	try {
+		const response = await pythonBridge(plugin, {
+			command: "fourier_transform",
+			context: {
+				chunk: symbolicContext.content,
+				line: cursor.line - symbolicContext.startLine,
+				char: cursor.ch,
+				expression: parsed.expression,
+				wrt: parsed.variable,
+				frequency: parsed.frequency,
+			},
+		});
+		if (!response.ok) {
+			new Notice(response.error.message);
+			return;
+		}
+		const current = activeFourierTransform(view);
+		if (
+			!current ||
+			current.commandFrom !== parsed.commandFrom ||
+			current.expression !== parsed.expression ||
+			current.variable !== parsed.variable ||
+			current.frequency !== parsed.frequency
+		) {
+			new Notice("The Fourier transform command changed; no text was replaced.");
+			return;
+		}
+		replaceInlineResult(view, current, response.latex);
+		activeFourierTransforms.delete(view);
+	} catch (error) {
+		reportBridgeFailure("Fourier transform", error);
+	}
+}
+
+async function submitFourierSeries(
+	plugin: LatexSuitePlugin,
+	view: EditorView,
+	parsed: ParsedFourierSeries,
+): Promise<void> {
+	const active = activeFourierSeries.get(view);
+	if (!active) return;
+	const symbolicContext = grabSymbolicContext(active.editor);
+	if (!symbolicContext) {
+		new Notice("Could not determine the current mathematical context.");
+		return;
+	}
+	const cursor = active.editor.getCursor();
+	try {
+		const response = await pythonBridge(plugin, {
+			command: "fourier_series",
+			context: {
+				chunk: symbolicContext.content,
+				line: cursor.line - symbolicContext.startLine,
+				char: cursor.ch,
+				expression: parsed.expression,
+				wrt: parsed.variable,
+				lower: parsed.lower,
+				upper: parsed.upper,
+				terms: Number(parsed.terms.trim()),
+			},
+		});
+		if (!response.ok) {
+			new Notice(response.error.message);
+			return;
+		}
+		const current = activeFourierSeriesCommand(view);
+		if (
+			!current ||
+			current.commandFrom !== parsed.commandFrom ||
+			current.expression !== parsed.expression ||
+			current.variable !== parsed.variable ||
+			current.lower !== parsed.lower ||
+			current.upper !== parsed.upper ||
+			current.terms !== parsed.terms
+		) {
+			new Notice("The Fourier series command changed; no text was replaced.");
+			return;
+		}
+		replaceInlineResult(view, current, response.latex);
+		activeFourierSeries.delete(view);
+	} catch (error) {
+		reportBridgeFailure("Fourier series", error);
+	}
+}
+
+function replaceInlineResult(
+	view: EditorView,
+	parsed: { commandFrom: number; commandTo: number },
+	latex: string,
+): void {
+	view.dispatch({
+		changes: { from: parsed.commandFrom, to: parsed.commandTo, insert: latex },
+		selection: { anchor: parsed.commandFrom + latex.length },
+	});
+}
+
+function reportBridgeFailure(label: string, error: unknown): void {
+	new Notice(
+		`Could not calculate ${label}: ${
+			error instanceof Error ? error.message : String(error)
+		}`,
+	);
+	console.error(`oScribe ${label} bridge failure`, error);
+}
+
 async function submitTwoFieldOperation(
 	plugin: LatexSuitePlugin,
 	view: EditorView,
@@ -1313,6 +1594,115 @@ function parseInlineDefiniteIntegral(
 		commandFrom: start,
 		commandTo,
 	};
+}
+
+interface ParsedFourierTransform {
+	expression: string;
+	variable: string;
+	frequency: string;
+	exprFrom: number;
+	exprTo: number;
+	variableFrom: number;
+	variableTo: number;
+	frequencyFrom: number;
+	frequencyTo: number;
+	commandFrom: number;
+	commandTo: number;
+}
+
+interface ParsedFourierSeries {
+	expression: string;
+	variable: string;
+	lower: string;
+	upper: string;
+	terms: string;
+	exprFrom: number;
+	exprTo: number;
+	variableFrom: number;
+	variableTo: number;
+	lowerFrom: number;
+	lowerTo: number;
+	upperFrom: number;
+	upperTo: number;
+	termsFrom: number;
+	termsTo: number;
+	commandFrom: number;
+	commandTo: number;
+}
+
+function parseFourierTransform(view: EditorView): ParsedFourierTransform | null {
+	const parsed = parseCommandFields(view, FOURIER_TRANSFORM_COMMAND, 3);
+	if (!parsed) return null;
+	const [expression, variable, frequency] = parsed.fields;
+	return {
+		expression: parsed.doc.slice(expression.from, expression.to),
+		variable: parsed.doc.slice(variable.from, variable.to),
+		frequency: parsed.doc.slice(frequency.from, frequency.to),
+		exprFrom: expression.from,
+		exprTo: expression.to,
+		variableFrom: variable.from,
+		variableTo: variable.to,
+		frequencyFrom: frequency.from,
+		frequencyTo: frequency.to,
+		commandFrom: parsed.commandFrom,
+		commandTo: parsed.commandTo,
+	};
+}
+
+function parseFourierSeries(view: EditorView): ParsedFourierSeries | null {
+	const parsed = parseCommandFields(view, FOURIER_SERIES_COMMAND, 5);
+	if (!parsed) return null;
+	const [expression, variable, lower, upper, terms] = parsed.fields;
+	return {
+		expression: parsed.doc.slice(expression.from, expression.to),
+		variable: parsed.doc.slice(variable.from, variable.to),
+		lower: parsed.doc.slice(lower.from, lower.to),
+		upper: parsed.doc.slice(upper.from, upper.to),
+		terms: parsed.doc.slice(terms.from, terms.to),
+		exprFrom: expression.from,
+		exprTo: expression.to,
+		variableFrom: variable.from,
+		variableTo: variable.to,
+		lowerFrom: lower.from,
+		lowerTo: lower.to,
+		upperFrom: upper.from,
+		upperTo: upper.to,
+		termsFrom: terms.from,
+		termsTo: terms.to,
+		commandFrom: parsed.commandFrom,
+		commandTo: parsed.commandTo,
+	};
+}
+
+function parseCommandFields(
+	view: EditorView,
+	command: string,
+	count: number,
+): {
+	doc: string;
+	fields: Array<{ from: number; to: number; close: number }>;
+	commandFrom: number;
+	commandTo: number;
+} | null {
+	const ctx = getContextPlugin(view);
+	const bounds = ctx.getInnerBounds();
+	if (!bounds) return null;
+	const doc = view.state.doc.toString();
+	const cursor = view.state.selection.main.head;
+	let start = doc.lastIndexOf(command + "{", cursor);
+	if (start < bounds.inner_start) start = doc.indexOf(command + "{", cursor);
+	if (start < bounds.inner_start || start >= bounds.inner_end) return null;
+	const fields: Array<{ from: number; to: number; close: number }> = [];
+	let offset = start + command.length;
+	for (let index = 0; index < count; index++) {
+		const field = parseBracedField(doc, offset);
+		if (!field) return null;
+		fields.push(field);
+		offset = field.close + 1;
+	}
+	const commandTo = fields[fields.length - 1].close + 1;
+	if (commandTo > bounds.inner_end || cursor < start || cursor > commandTo) return null;
+	return { doc, fields, commandFrom: start, commandTo };
 }
 
 interface ParsedInlinePDE {
