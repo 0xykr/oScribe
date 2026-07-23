@@ -215,9 +215,9 @@ def parse_expression(
         raise ParseError("Expected an expression rather than a relation.")
     parsed = parsed.xreplace(
         {
-            symbol: sp.pi
+            symbol: sp.pi if symbol.name == "pi" else sp.E
             for symbol in parsed.free_symbols
-            if symbol.name == "pi"
+            if symbol.name in {"pi", "e"}
         }
     )
     return parsed

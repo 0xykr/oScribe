@@ -127,6 +127,19 @@ class ResolutionAndOperationTests(unittest.TestCase):
         self.assertIn(r"\sum_{n=1}^{\infty}", result)
         self.assertIn(r"\left(-1\right)^{n}", result)
 
+    def test_exponential_infinite_fourier_series_uses_euler_constant(self):
+        result = fourier_series_expansion(
+            MathContext(),
+            r"(x^2+2x)e^{3x}",
+            "x",
+            r"-\pi",
+            r"\pi",
+            r"\infty",
+        )
+        self.assertIn(r"\sum_{n=1}^{\infty}", result)
+        self.assertNotIn(r"\log{\left(e \right)}", result)
+        self.assertNotIn(r"\begin{cases}", result)
+
     def test_fourier_series_rejects_zero_interval(self):
         with self.assertRaisesRegex(Exception, "zero length"):
             fourier_series_expansion(MathContext(), "x", "x", "0", "0", 3)
