@@ -120,6 +120,13 @@ class ResolutionAndOperationTests(unittest.TestCase):
         )
         self.assertIn(r"\sin", result)
 
+    def test_infinite_fourier_series_uses_sigma_formula(self):
+        result = fourier_series_expansion(
+            MathContext(), "x", "x", r"-\pi", r"\pi", r"\infty"
+        )
+        self.assertIn(r"\sum_{n=1}^{\infty}", result)
+        self.assertIn(r"\left(-1\right)^{n}", result)
+
     def test_fourier_series_rejects_zero_interval(self):
         with self.assertRaisesRegex(Exception, "zero length"):
             fourier_series_expansion(MathContext(), "x", "x", "0", "0", 3)

@@ -222,16 +222,25 @@ def fourier_series_expansion(
         raise FourierOperationError(
             "The Fourier series variable must be a single symbol."
         )
-    try:
-        terms = int(terms_value)
-    except (TypeError, ValueError) as error:
-        raise FourierOperationError(
-            "Fourier series terms must be an integer from 1 to 1000."
-        ) from error
-    if isinstance(terms_value, bool) or not 1 <= terms <= 1000:
-        raise FourierOperationError(
-            "Fourier series terms must be an integer from 1 to 1000."
-        )
+    terms_text = str(terms_value).strip().lower().replace(" ", "")
+    infinite = terms_text in {
+        r"\infty",
+        "infty",
+        "infinity",
+        "oo",
+        "∞",
+    }
+    if not infinite:
+        try:
+            terms = int(terms_value)
+        except (TypeError, ValueError) as error:
+            raise FourierOperationError(
+                "Fourier series terms must be a positive integer or infinity."
+            ) from error
+        if isinstance(terms_value, bool) or not 1 <= terms <= 1000:
+            raise FourierOperationError(
+                "Fourier series terms must be an integer from 1 to 1000, or infinity."
+            )
     expression = context.resolve(
         parse_expression(expression_source, context.matrix_symbols())
     )
@@ -240,6 +249,10 @@ def fourier_series_expansion(
     if sp.simplify(upper - lower) == 0:
         raise FourierOperationError("Fourier series interval cannot have zero length.")
     try:
+        if infinite:
+            return sp.latex(
+                _infinite_fourier_series(expression, variable, lower, upper)
+            )
         series = sp.fourier_series(expression, (variable, lower, upper))
         result = series.truncate(n=terms)
     except Exception as error:
@@ -247,6 +260,41 @@ def fourier_series_expansion(
             f"Could not calculate this Fourier series: {error}"
         ) from error
     return sp.latex(result)
+
+
+def _infinite_fourier_series(
+    expression: sp.Basic,
+    variable: sp.Symbol,
+    lower: sp.Basic,
+    upper: sp.Basic,
+) -> sp.Basic:
+    period = sp.simplify(upper - lower)
+    harmonic = sp.Symbol("n", integer=True, positive=True)
+    omega = sp.simplify(2 * sp.pi / period)
+    constant = sp.simplify(
+        sp.integrate(expression, (variable, lower, upper)) / period
+    )
+    cosine_coefficient = sp.simplify(
+        2
+        * sp.integrate(
+            expression * sp.cos(harmonic * omega * variable),
+            (variable, lower, upper),
+        )
+        / period
+    )
+    sine_coefficient = sp.simplify(
+        2
+        * sp.integrate(
+            expression * sp.sin(harmonic * omega * variable),
+            (variable, lower, upper),
+        )
+        / period
+    )
+    term = (
+        cosine_coefficient * sp.cos(harmonic * omega * variable)
+        + sine_coefficient * sp.sin(harmonic * omega * variable)
+    )
+    return constant + sp.Sum(term, (harmonic, 1, sp.oo))
 
 
 def _require_evaluated_integral(result: sp.Expr) -> None:

@@ -579,7 +579,7 @@ const fourierSeriesCommand = (_plugin: LatexSuitePlugin) =>
 		"oscribe-sympy-fourier-series",
 		"oScribe: Calculate Fourier series expansion",
 		FOURIER_SERIES_COMMAND,
-		["x", String.raw`-\pi`, String.raw`\pi`, "5"],
+		["x", String.raw`-\pi`, String.raw`\pi`, String.raw`\infty`],
 		activeFourierSeries,
 	);
 
@@ -1306,7 +1306,7 @@ async function submitFourierSeries(
 				wrt: parsed.variable,
 				lower: parsed.lower,
 				upper: parsed.upper,
-				terms: Number(parsed.terms.trim()),
+				terms: parsed.terms.trim(),
 			},
 		});
 		if (!response.ok) {

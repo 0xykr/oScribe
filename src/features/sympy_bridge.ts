@@ -31,7 +31,7 @@ export interface SymPyRequest {
 		ansatz?: string;
 		precision?: number;
 		frequency?: string;
-		terms?: number;
+		terms?: number | string;
 	};
 }
 
