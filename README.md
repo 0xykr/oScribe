@@ -751,14 +751,14 @@ commutative scalar products.
 | Matrix inverse | Invertible square matrix |
 | Matrix transpose | Matrix expression |
 | Matrix trace | Square matrix expression |
-| Matrix norm | Concrete matrix |
-| Matrix RREF | Concrete matrix |
-| Matrix rank | Concrete matrix |
-| Matrix nullspace | Concrete matrix |
-| Matrix eigenvalues | Concrete square matrix |
-| Matrix eigenvectors | Concrete square matrix |
-| Matrix characteristic polynomial | Concrete square matrix |
-| Diagonalize matrix | Diagonalizable concrete square matrix |
+| Matrix norm | Explicit matrix |
+| Matrix RREF | Explicit matrix |
+| Matrix rank | Explicit matrix |
+| Matrix nullspace | Explicit matrix |
+| Matrix eigenvalues | Explicit square matrix |
+| Matrix eigenvectors | Explicit square matrix |
+| Matrix characteristic polynomial | Explicit square matrix |
+| Diagonalize matrix | Diagonalizable Explicit square matrix |
 
 These commands run immediately on the selected/current expression rather than
 creating a scaffold.
